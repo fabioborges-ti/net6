@@ -5,37 +5,46 @@ var app = builder.Build();
 
 app.MapGet("/products", () =>
 {
-    var data = ProductRepository.GetAll();
+    var result = ProductRepository.GetAll();
 
-    return data;
+    return result;
 });
 
 app.MapGet("/products/{code}", ([FromRoute] string code) =>
 {
     var result = ProductRepository.GetBy(code);
 
-    return result;
+    if (result != null)
+        return Results.Ok(result);
+
+    return Results.NotFound("Product not found"); ;
 });
 
 app.MapPost("/products", (Product product) =>
 {
     var result = ProductRepository.Add(product);
 
-    return result;
+    return Results.Created($"/products/{product.Code}", result);
 });
 
 app.MapPut("/products", (Product product) =>
 {
     var result = ProductRepository.Update(product);
 
-    return result;
+    if (result != null)
+        return Results.Ok(result);
+
+    return Results.NotFound("Product not found.");
 });
 
 app.MapDelete("/products/{code}", ([FromRoute] string code) =>
 {
     var result = ProductRepository.Remove(code);
 
-    return result;
+    if (!result)
+        return Results.NotFound("Product not found.");
+
+    return Results.Ok("Product removed successfully.");
 });
 
 app.Run();
@@ -73,8 +82,10 @@ public static class ProductRepository
     {
         var data = Products.FirstOrDefault(x => x.Code == product.Code);
 
-        if (data != null)
-            data.Name = product.Name;
+        if (data == null)
+            return null;
+
+        data.Name = product.Name;
 
         return data;
     }
@@ -83,9 +94,11 @@ public static class ProductRepository
     {
         var data = Products.FirstOrDefault(x => x.Code == code);
 
-        if (data != null)
-            Products.Remove(data);
+        if (data == null)
+            return false;
 
-        return data != null;
+        Products.Remove(data);
+
+        return true;
     }
 }
